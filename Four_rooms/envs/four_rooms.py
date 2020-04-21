@@ -19,12 +19,18 @@ class FourRooms(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
-        self.room_sizes = [[5, 5], [6, 5], [5, 5], [4, 5]]
+        self.room_sizes = [[5, 5], [6, 5], [4, 5], [5, 5]]
         self.pre_hallways = [
             {tuple([2, 4]): [RIGHT, 0], tuple([4, 1]): [DOWN, 3]},
             {tuple([2, 0]): [LEFT, 0], tuple([5, 2]): [DOWN, 1]},
             {tuple([0, 2]): [UP, 1], tuple([2, 0]): [LEFT, 2]},
             {tuple([3, 4]): [RIGHT, 2], tuple([0, 1]): [UP, 3]},
+        ]
+        self.pre_hallway_action = [
+            {tuple([2, 4]): [DOWN, [3, 4]], tuple([4, 1]): [RIGHT, [4, 2]]},
+            {tuple([2, 0]): [DOWN, [3, 0]], tuple([5, 2]): [LEFT, [5, 1]]},
+            {tuple([0, 2]): [LEFT, [0, 1]], tuple([2, 0]): [UP, [1, 0]]},
+            {tuple([3, 4]): [UP, [2, 4]], tuple([0, 1]): [RIGHT, [0, 2]]},
         ]
         self.hallway_coords = [[2, 5], [6, 2], [2, -1], [-1, 1]]
         self.hallways = [  # self.hallways[i][j] = [next_room, next_coord] when taking action j from hallway i#
@@ -40,7 +46,7 @@ class FourRooms(gym.Env):
         self.n_states = self.offsets[4] + 1
         self.absorbing_state = self.n_states
 
-        self.goal = [2, [1, 2]]
+        self.goal = [1, [-1, 2]]
         self.terminal_state = self.encode(self.goal)
 
         self.noise = 0  # 0.33
@@ -128,15 +134,34 @@ class FourRooms(gym.Env):
             action = self.action_space.sample()
 
         if in_hallway:  # hallway action
+            # print('hallway', room, coord, action)
             [room2, coord2] = self.hallways[room][action]
 
         elif tuple(coord) in self.pre_hallways[room].keys():
+            # print('pre-hallway', room, coord)
             hallway_info = self.pre_hallways[room][tuple(coord)]
             if action == hallway_info[0]:
                 room2 = hallway_info[1]
                 coord2 = self.hallway_coords[room2]
+            else:
+                hallway_info = self.pre_hallway_action[room][tuple(coord)]
+                if action == hallway_info[0]:  # executing option to go to opposite hallway
+                    coord2 = hallway_info[1]
+                else:  # normal action
+                    [row, col] = coord
+                    [rows, cols] = self.room_sizes[room]
+                    if action == UP:
+                        row = max(row - 1, 0)
+                    elif action == DOWN:
+                        row = min(row + 1, rows - 1)
+                    elif action == RIGHT:
+                        col = min(col + 1, cols - 1)
+                    elif action == LEFT:
+                        col = max(col - 1, 0)
+                    coord2 = [row, col]
 
         else:  # normal action
+            # print('normal', room, coord, action)
             [row, col] = coord
             [rows, cols] = self.room_sizes[room]
             if action == UP:
