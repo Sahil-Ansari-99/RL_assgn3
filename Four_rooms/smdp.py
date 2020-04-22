@@ -125,18 +125,17 @@ for i in range(n_iterations):
             g *= gamma
             curr_state = new_state
 
-            if not option_over:
+            if not option_over:  # check if option is over
                 option_over = (curr_state == terminal_hallways[curr_option])
 
-            if done:  # update q value of terminal state
-                # print(curr_state, start_state)
-                diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
-                    opt_index]  # temporal difference
-                q_values[start_state][opt_index] += alpha * diff  # update q value
-                reward += curr_reward  # update total episode reward
+        # update q value of terminal state
+        diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
+            opt_index]  # temporal difference
+        q_values[start_state][opt_index] += alpha * diff  # update q value
+        reward += curr_reward  # update total episode reward
 
-        total_reward += reward
-        total_steps += steps
+        total_reward += reward  # update total iteration reward
+        total_steps += steps  # update total iteration steps
 
     avg_rewards.append(total_reward / n_episodes)
     avg_steps.append(total_steps / n_episodes)

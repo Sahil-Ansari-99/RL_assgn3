@@ -46,7 +46,7 @@ class FourRooms(gym.Env):
         self.n_states = self.offsets[4] + 1
         self.absorbing_state = self.n_states
 
-        self.goal = [1, [6, 2]]
+        self.goal = [2, [1, 2]]
         self.terminal_state = self.encode(self.goal)
 
         self.noise = 0.33  # 0.33
