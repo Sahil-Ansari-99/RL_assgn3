@@ -20,7 +20,7 @@ NUM_ROOMS = 4
 room_sizes = [[5, 5], [6, 5], [4, 5], [5, 5]]
 options = get_options()  # get options for each room
 terminal_hallways = get_terminal_hallways()
-primitive_actions = [UP, RIGHT, DOWN, LEFT]  # primitive action list
+# primitive_actions = [UP, RIGHT, DOWN, LEFT]  # primitive action list
 option_map = dict()  # maps option index to index in options
 option_map[0] = [0, 1]
 option_map[1] = [2, 3]
@@ -35,7 +35,7 @@ option_back_map[(2, 4)] = 0
 option_back_map[(2, 5)] = 1
 option_back_map[(3, 6)] = 0
 option_back_map[(3, 7)] = 1
-alpha = 0.1  # learning rate
+alpha = 0.125  # learning rate
 gamma = 0.9  # discount factor
 epsilon = 0.1  # epsilon for epsilon-greedy
 
@@ -55,7 +55,7 @@ for i in range(0, 104):
         q_list.append(0)
     q_values.append(q_list)     # [opt1, opt2, UP, RIGHT, DOWN, LEFT]
 
-n_iterations = 1000
+n_iterations = 3000
 n_episodes = 50
 
 avg_rewards = []
@@ -101,8 +101,18 @@ for i in range(n_iterations):
                         option_over = False
                     else:
                         # print('Primitive')
-                        curr_option = np.random.randint(2, 6)
+                        opt_list = []
+                        for k in range(0, 6):
+                            if k != opt_index:
+                                opt_list.append(k)
+                        idx = np.random.randint(0, 5)
+                        curr_option = opt_list[idx]
                         opt_index = curr_option
+                        if curr_option < 2:
+                            room = [r for r, offset in enumerate(offsets[1:5]) if curr_state < offset][
+                                0]  # current room
+                            curr_option = option_map.get(room)[curr_option]  # get the index in options
+                            option_over = False
             # print(curr_option)
             if not option_over:
                 action = options[curr_option][curr_state]  # get action for current state in current option
@@ -116,7 +126,14 @@ for i in range(n_iterations):
             curr_state = new_state
 
             if not option_over:
-                option_over = (new_state == terminal_hallways[curr_option])
+                option_over = (curr_state == terminal_hallways[curr_option])
+
+            if done:  # update q value of terminal state
+                # print(curr_state, start_state)
+                diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
+                    opt_index]  # temporal difference
+                q_values[start_state][opt_index] += alpha * diff  # update q value
+                reward += curr_reward  # update total episode reward
 
         total_reward += reward
         total_steps += steps

@@ -46,18 +46,19 @@ class FourRooms(gym.Env):
         self.n_states = self.offsets[4] + 1
         self.absorbing_state = self.n_states
 
-        self.goal = [1, [-1, 2]]
+        self.goal = [1, [6, 2]]
         self.terminal_state = self.encode(self.goal)
 
-        self.noise = 0  # 0.33
+        self.noise = 0.33  # 0.33
         self.step_reward = 0.0
         self.terminal_reward = 1.0
-        self.bump_reward = -0.1
+        self.bump_reward = 0
 
         # start state random location in start room
         start_room = 0
         sz = self.room_sizes[start_room]
         self.start_state = self.offsets[start_room] + np.random.randint(sz[0] * sz[1] - 1)
+        # self.start_state = self.offsets[start_room] + int((sz[0]*sz[1] - 1) / 2)
         self._reset()
 
         self.action_space = spaces.Discrete(4)
@@ -120,18 +121,18 @@ class FourRooms(gym.Env):
     def _step(self, action):
         assert self.action_space.contains(action)
 
-        if self.state == self.terminal_state:
-            self.state = self.absorbing_state
-            self.done = True
-            return self.state, self._get_reward(), self.done, None
+        # if self.state == self.terminal_state:
+        #     self.state = self.absorbing_state
+        #     self.done = True
+        #     return self.state, self._get_reward(), self.done, None
 
         in_hallway = self.in_hallway_index()
         [room, coord] = self.decode(self.state, in_hallway=in_hallway)
         room2 = room
         coord2 = coord
 
-        if np.random.rand() < self.noise:
-            action = self.action_space.sample()
+        # if np.random.rand() < self.noise:
+        #     action = self.action_space.sample()
 
         if in_hallway:  # hallway action
             # print('hallway', room, coord, action)
@@ -139,29 +140,33 @@ class FourRooms(gym.Env):
 
         elif tuple(coord) in self.pre_hallways[room].keys():
             # print('pre-hallway', room, coord)
+            if np.random.rand() < self.noise:
+                action = self.action_space.sample()
             hallway_info = self.pre_hallways[room][tuple(coord)]
             if action == hallway_info[0]:
                 room2 = hallway_info[1]
                 coord2 = self.hallway_coords[room2]
             else:
                 hallway_info = self.pre_hallway_action[room][tuple(coord)]
-                if action == hallway_info[0]:  # executing option to go to opposite hallway
-                    coord2 = hallway_info[1]
-                else:  # normal action
-                    [row, col] = coord
-                    [rows, cols] = self.room_sizes[room]
-                    if action == UP:
-                        row = max(row - 1, 0)
-                    elif action == DOWN:
-                        row = min(row + 1, rows - 1)
-                    elif action == RIGHT:
-                        col = min(col + 1, cols - 1)
-                    elif action == LEFT:
-                        col = max(col - 1, 0)
-                    coord2 = [row, col]
+                # if action == hallway_info[0]:  # executing option to go to opposite hallway
+                #     coord2 = hallway_info[1]
+                # else:  # normal action
+                [row, col] = coord
+                [rows, cols] = self.room_sizes[room]
+                if action == UP:
+                    row = max(row - 1, 0)
+                elif action == DOWN:
+                    row = min(row + 1, rows - 1)
+                elif action == RIGHT:
+                    col = min(col + 1, cols - 1)
+                elif action == LEFT:
+                    col = max(col - 1, 0)
+                coord2 = [row, col]
 
         else:  # normal action
             # print('normal', room, coord, action)
+            if np.random.rand() < self.noise:
+                action = self.action_space.sample()
             [row, col] = coord
             [rows, cols] = self.room_sizes[room]
             if action == UP:
@@ -176,6 +181,11 @@ class FourRooms(gym.Env):
 
         new_state = self.encode([room2, coord2])
         self.state = new_state
+
+        if self.state == self.terminal_state:
+            # self.state = self.absorbing_state
+            self.done = True
+            return self.state, self._get_reward(), self.done, None
 
         reward = self._get_reward(new_state=new_state)
 
