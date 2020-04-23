@@ -93,7 +93,7 @@ terminal_hallways = [25, 103, 25, 56, 56, 77, 77, 103]  # target hallway for opt
 for i in range(len(options)):
     curr = []
     for j in range(0, 104):
-        curr.append(0)
+        curr.append(-1)
     options_encoded.append(curr)
 
 for i in range(len(options)):
@@ -101,7 +101,7 @@ for i in range(len(options)):
     for j in range(len(options[i])):
         options_encoded[i][start+j] = options[i][j]
     options_encoded[i][hmm[i]] = hmm_action[i]  # assigning action for non-target hallway state in option i
-
+    options_encoded[i][terminal_hallways[i]] = 10  # terminal hallway
 
 def get_options():
     return options_encoded

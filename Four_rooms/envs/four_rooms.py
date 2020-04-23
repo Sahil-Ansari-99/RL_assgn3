@@ -26,12 +26,12 @@ class FourRooms(gym.Env):
             {tuple([0, 2]): [UP, 1], tuple([2, 0]): [LEFT, 2]},
             {tuple([3, 4]): [RIGHT, 2], tuple([0, 1]): [UP, 3]},
         ]
-        self.pre_hallway_action = [
-            {tuple([2, 4]): [DOWN, [3, 4]], tuple([4, 1]): [RIGHT, [4, 2]]},
-            {tuple([2, 0]): [DOWN, [3, 0]], tuple([5, 2]): [LEFT, [5, 1]]},
-            {tuple([0, 2]): [LEFT, [0, 1]], tuple([2, 0]): [UP, [1, 0]]},
-            {tuple([3, 4]): [UP, [2, 4]], tuple([0, 1]): [RIGHT, [0, 2]]},
-        ]
+        # self.pre_hallway_action = [
+        #     {tuple([2, 4]): [DOWN, [3, 4]], tuple([4, 1]): [RIGHT, [4, 2]]},
+        #     {tuple([2, 0]): [DOWN, [3, 0]], tuple([5, 2]): [LEFT, [5, 1]]},
+        #     {tuple([0, 2]): [LEFT, [0, 1]], tuple([2, 0]): [UP, [1, 0]]},
+        #     {tuple([3, 4]): [UP, [2, 4]], tuple([0, 1]): [RIGHT, [0, 2]]},
+        # ]
         self.hallway_coords = [[2, 5], [6, 2], [2, -1], [-1, 1]]
         self.hallways = [  # self.hallways[i][j] = [next_room, next_coord] when taking action j from hallway i#
             [[0, self.hallway_coords[0]], [1, [2, 0]], [0, self.hallway_coords[0]], [0, [2, 4]]],
@@ -46,7 +46,7 @@ class FourRooms(gym.Env):
         self.n_states = self.offsets[4] + 1
         self.absorbing_state = self.n_states
 
-        self.goal = [2, [1, 2]]  # [1, [6. 2]]
+        self.goal = [2, [1, 2]]  # [1, [6. 2]], [2, [1, 2]]
         self.terminal_state = self.encode(self.goal)
 
         self.noise = 0.33  # 0.33
@@ -58,6 +58,7 @@ class FourRooms(gym.Env):
         start_room = 0
         sz = self.room_sizes[start_room]
         self.start_state = self.offsets[start_room] + np.random.randint(sz[0] * sz[1] - 1)
+        self.state = 0
         # self.start_state = self.offsets[start_room] + int((sz[0]*sz[1] - 1) / 2)
         self._reset()
 
@@ -131,8 +132,12 @@ class FourRooms(gym.Env):
         room2 = room
         coord2 = coord
 
-        # if np.random.rand() < self.noise:
-        #     action = self.action_space.sample()
+        if np.random.rand() < self.noise:
+            temp = []
+            for i in range(0, 4):
+                temp.append(i)
+            action = temp[np.random.randint(0, len(temp))]
+            # action = self.action_space.sample()
 
         if in_hallway:  # hallway action
             # print('hallway', room, coord, action)
@@ -140,17 +145,13 @@ class FourRooms(gym.Env):
 
         elif tuple(coord) in self.pre_hallways[room].keys():
             # print('pre-hallway', room, coord)
-            if np.random.rand() < self.noise:
-                action = self.action_space.sample()
+            # if np.random.rand() < self.noise:
+            #     action = self.action_space.sample()
             hallway_info = self.pre_hallways[room][tuple(coord)]
             if action == hallway_info[0]:
                 room2 = hallway_info[1]
                 coord2 = self.hallway_coords[room2]
             else:
-                hallway_info = self.pre_hallway_action[room][tuple(coord)]
-                # if action == hallway_info[0]:  # executing option to go to opposite hallway
-                #     coord2 = hallway_info[1]
-                # else:  # normal action
                 [row, col] = coord
                 [rows, cols] = self.room_sizes[room]
                 if action == UP:
@@ -165,8 +166,8 @@ class FourRooms(gym.Env):
 
         else:  # normal action
             # print('normal', room, coord, action)
-            if np.random.rand() < self.noise:
-                action = self.action_space.sample()
+            # if np.random.rand() < self.noise:
+            #     action = self.action_space.sample()
             [row, col] = coord
             [rows, cols] = self.room_sizes[room]
             if action == UP:
@@ -207,6 +208,11 @@ class FourRooms(gym.Env):
         return (row == 0 or row == self.n - 1 or col == 0 or col == self.n - 1)
 
     def _reset(self):
+        start_room = 0
+        sz = self.room_sizes[start_room]
+        self.start_state = self.offsets[start_room] + np.random.randint(sz[0] * sz[1] - 1)  # random location in room
+        # self.start_state = self.offsets[start_room] + int((sz[0] * sz[1] - 1) / 2)  # centre of room
+        # self.start_state = 0  # top left corner
         self.state = self.start_state if not isinstance(self.start_state, str) else np.random.randint(self.n_states - 1)
         self.done = False
         return self.state

@@ -39,7 +39,7 @@ alpha = 0.125  # learning rate
 gamma = 0.9  # discount factor
 epsilon = 0.1  # epsilon for epsilon-greedy
 
-q_values = []
+# q_values = []
 # testing code
 offsets = env.offsets
 # index = 56
@@ -48,22 +48,29 @@ offsets = env.offsets
 # print(room)
 # print(b)
 
-# initialize q values for each location including hallways
-for i in range(0, 104):
-    q_list = list()
-    for j in range(0, 6):  # first 2 for options, rest for primitive actions
-        q_list.append(0)
-    q_values.append(q_list)     # [opt1, opt2, UP, RIGHT, DOWN, LEFT]
 
-n_iterations = 3000
-n_episodes = 50
+def init_q_values():
+    q_values = []
+    # initialize q values for each location including hallways
+    for i in range(0, 104):
+        q_list = list()
+        for j in range(0, 6):  # first 2 for options, rest for primitive actions
+            q_list.append(0)
+        q_values.append(q_list)     # [opt1, opt2, UP, RIGHT, DOWN, LEFT]
+    return q_values
+
+
+n_iterations = 50
+n_episodes = 10000
 
 avg_rewards = []
 avg_steps = []
-
+tr = []
+ts = []
 for i in range(n_iterations):
-    total_reward = 0
-    total_steps = 0
+    q_values = init_q_values()
+    total_reward = []
+    total_steps = []
     for j in range(n_episodes):
         print(i, j)
         option_over = True
@@ -123,36 +130,54 @@ for i in range(n_iterations):
             new_state, rew, done, _ = env.step(action)
             curr_reward += g * rew
             g *= gamma
-            curr_state = new_state
+            # print(curr_state, new_state)
+            if options[curr_option][new_state] != -1:
+                curr_state = new_state
+            else:  # new state not included in current option
+                env.state = curr_state
 
             if not option_over:  # check if option is over
                 option_over = (curr_state == terminal_hallways[curr_option])
 
+        # print(start_state, opt_index)
         # update q value of terminal state
         diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
             opt_index]  # temporal difference
         q_values[start_state][opt_index] += alpha * diff  # update q value
         reward += curr_reward  # update total episode reward
 
-        total_reward += reward  # update total iteration reward
-        total_steps += steps  # update total iteration steps
+        total_reward.append(reward)  # update total iteration reward
+        total_steps.append(steps)  # update total iteration steps
 
-    avg_rewards.append(total_reward / n_episodes)
-    avg_steps.append(total_steps / n_episodes)
+    tr.append(total_reward)
+    ts.append(total_steps)
+    # avg_rewards.append(total_reward / n_episodes)
+    # avg_steps.append(total_steps / n_episodes)
+
+for i in range(n_episodes):
+    tot = 0
+    tot_steps = 0
+    for j in range(n_iterations):
+        tot += tr[j][i]
+        tot_steps += ts[j][i]
+    avg_rewards.append(tot / n_iterations)
+    avg_steps.append(tot_steps / n_iterations)
 
 # plotting graphs
-fig_rewards = plt.figure().add_subplot(111)
+# fig_rewards = plt.figure().add_subplot(111)
 fig_steps = plt.figure().add_subplot(111)
 
-fig_rewards.set_xlabel('Iterations')
-fig_rewards.set_ylabel('Average Reward')
-fig_rewards.title.set_text('Average Reward vs Time')
+# fig_rewards.set_xlabel('Iterations')
+# fig_rewards.set_ylabel('Average Reward')
+# fig_rewards.title.set_text('Average Reward vs Time')
 
-fig_steps.set_xlabel('Iterations')
+fig_steps.set_xlabel('Episodes')
+fig_steps.set_xscale('log')
+fig_steps.set_yscale('log')
 fig_steps.set_ylabel('Average Episode Length')
 fig_steps.title.set_text('Average Episode Length vs Time')
 
-fig_rewards.plot(range(n_iterations), avg_rewards)
-fig_steps.plot(range(n_iterations), avg_steps)
+# fig_rewards.plot(range(len(avg_rewards)), avg_rewards)
+fig_steps.plot(range(len(avg_steps)), avg_steps)
 
 plt.show()
