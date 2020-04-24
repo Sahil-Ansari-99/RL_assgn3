@@ -2,6 +2,7 @@ import gym
 import matplotlib.pyplot as plt
 from options_generator import get_options, get_terminal_hallways
 import numpy as np
+import seaborn as sb
 
 gym.register(id='FourRooms-v0',
                 entry_point='envs.four_rooms:FourRooms')
@@ -49,15 +50,35 @@ offsets = env.offsets
 # print(b)
 
 
-def init_q_values():
-    q_values = []
-    # initialize q values for each location including hallways
-    for i in range(0, 104):
-        q_list = list()
-        for j in range(0, 6):  # first 2 for options, rest for primitive actions
-            q_list.append(0)
-        q_values.append(q_list)     # [opt1, opt2, UP, RIGHT, DOWN, LEFT]
-    return q_values
+# visualize q values
+def plot_q_map(q):
+    print(q)
+    q_map = np.zeros([13, 13])
+    q_map.fill(-0.5)  # default value for walls
+    starts = [0, 26, 57, 78]
+    dimens = [[5, 5], [6, 5], [4, 5], [5, 5]]
+    offs = [[1, 1], [1, 7], [8, 7], [7, 1]]
+    hallway = [[3, 6], [7, 9], [10, 6], [6, 2]]
+    cnt = 0
+    for i in range(0, 4):
+        z = 0
+        curr_start = starts[i]
+        r = dimens[i][0]
+        c = dimens[i][1]
+        offs_r = offs[i][0]
+        offs_c = offs[i][1]
+        for j in range(r):
+            for k in range(c):
+                q_map[j+offs_r][k+offs_c] = np.max(q[cnt])
+                if np.max(q[cnt]) == 0:
+                    z += 1
+                cnt += 1
+        q_map[hallway[i][0]][hallway[i][1]] = np.max(q[cnt])
+        if np.max(q[cnt]) == 0:
+            z += 1
+        cnt += 1
+        print(z)
+    ax = sb.heatmap(q_map, linewidths=0.5)
 
 
 n_iterations = 50
@@ -67,8 +88,9 @@ avg_rewards = []
 avg_steps = []
 tr = []
 ts = []
+last_q = np.zeros([104, 6])
 for i in range(n_iterations):
-    q_values = init_q_values()
+    q_values = np.zeros([104, 6])
     total_reward = []
     total_steps = []
     for j in range(n_episodes):
@@ -141,9 +163,10 @@ for i in range(n_iterations):
 
         # print(start_state, opt_index)
         # update q value of terminal state
-        diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
-            opt_index]  # temporal difference
-        q_values[start_state][opt_index] += alpha * diff  # update q value
+        if option_over:
+            diff = curr_reward + g * np.max(q_values[curr_state]) - q_values[start_state][
+                opt_index]  # temporal difference
+            q_values[start_state][opt_index] += alpha * diff  # update q value
         reward += curr_reward  # update total episode reward
 
         total_reward.append(reward)  # update total iteration reward
@@ -151,9 +174,11 @@ for i in range(n_iterations):
 
     tr.append(total_reward)
     ts.append(total_steps)
+    last_q = q_values
     # avg_rewards.append(total_reward / n_episodes)
     # avg_steps.append(total_steps / n_episodes)
 
+plot_q_map(last_q)
 for i in range(n_episodes):
     tot = 0
     tot_steps = 0
